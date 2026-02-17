@@ -1,0 +1,132 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+model User {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  password     String
+  role         UserRole  @default(USER)
+  refreshToken String?   @db.Text
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  stockMovements StockMovement[]
+  
+  @@map("users")
+}
+
+model Supplier {
+  id          String   @id @default(uuid())
+  name        String
+  email       String?
+  phone       String?
+  address     String?  @db.Text
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+  
+  @@map("suppliers")
+}
+
+model Warehouse {
+  id          String   @id @default(uuid())
+  name        String
+  location    String
+  capacity    Int?
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  inventories Inventory[]
+  
+  @@map("warehouses")
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+  
+  @@map("categories")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  sku         String   @unique
+  barcode     String?  @unique
+  description String?  @db.Text
+  price       Decimal  @db.Decimal(10, 2)
+  costPrice   Decimal? @db.Decimal(10, 2)
+  minStock    Int      @default(10)
+  categoryId  String?
+  supplierId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category       Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  supplier       Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  inventories    Inventory[]
+  stockMovements StockMovement[]
+  
+  @@map("products")
+}
+
+model Inventory {
+  id          String   @id @default(uuid())
+  productId   String
+  warehouseId String
+  quantity    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, warehouseId])
+  @@map("inventory")
+}
+
+model StockMovement {
+  id          String             @id @default(uuid())
+  productId   String
+  quantity    Int
+  type        StockMovementType
+  warehouseId String
+  userId      String
+  notes       String?            @db.Text
+  createdAt   DateTime           @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("stock_movements")
+}
