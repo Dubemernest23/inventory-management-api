@@ -2,7 +2,7 @@
 
 A comprehensive RESTful API built with TypeScript, Express, Prisma ORM, and MySQL featuring role-based access control, refresh tokens, suppliers, warehouses, and advanced stock management.
 
-## 🚀 Features
+## Features
 
 - **Authentication & Authorization**
   - JWT-based authentication with access and refresh tokens
@@ -46,13 +46,13 @@ A comprehensive RESTful API built with TypeScript, Express, Prisma ORM, and MySQ
   - Complete endpoint descriptions
   - Request/response examples
 
-## 📋 Prerequisites
+## Prerequisites
 
 - Node.js (v16 or higher)
 - MySQL (v8.0 or higher)
 - npm or yarn
 
-## 🛠️ Installation
+##  Installation
 
 1. **Clone the repository**
 ```bash
@@ -398,36 +398,7 @@ Authorization: Bearer <access-token>
 }
 ```
 
-## 🔐 Role-Based Access Control
-
-### User Roles & Permissions
-
-| Action | User | Manager | Admin |
-|--------|------|---------|-------|
-| View products | ✅ | ✅ | ✅ |
-| Create/edit products | ❌ | ✅ | ✅ |
-| Delete products | ❌ | ❌ | ✅ |
-| View suppliers | ✅ | ✅ | ✅ |
-| Manage suppliers | ❌ | ✅ | ✅ |
-| Delete suppliers | ❌ | ❌ | ✅ |
-| View warehouses | ✅ | ✅ | ✅ |
-| Manage warehouses | ❌ | ✅ | ✅ |
-| Record stock movements | ✅ | ✅ | ✅ |
-| View stock reports | ❌ | ✅ | ✅ |
-| Manage users | ❌ | ❌ | ✅ |
-
-## 📊 Database Schema
-
-### Core Tables
-- **Users**: User accounts with role-based access
-- **Products**: Product catalog with SKU, pricing, and stock levels
-- **Suppliers**: Supplier information and relationships
-- **Warehouses**: Storage facility management
-- **Categories**: Product categorization
-- **Inventory**: Real-time stock levels by warehouse
-- **StockMovements**: Complete audit trail of all stock changes
-
-## 🏗️ Project Structure
+##  Project Structure
 
 ```
 inventory-management-api/
@@ -466,101 +437,7 @@ inventory-management-api/
 └── README.md
 ```
 
-## 🧪 Testing with cURL
-
-### Complete workflow example:
-
-```bash
-# 1. Register a new user
-curl -X POST http://localhost:5001/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Doe",
-    "email": "john@example.com",
-    "password": "password123",
-    "role": "MANAGER"
-  }'
-
-# 2. Login and save tokens
-curl -X POST http://localhost:5001/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "john@example.com",
-    "password": "password123"
-  }'
-
-# 3. Create a supplier (replace TOKEN with access token)
-curl -X POST http://localhost:5001/api/suppliers \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer TOKEN" \
-  -d '{
-    "name": "Tech Supplies Inc",
-    "email": "contact@techsupplies.com",
-    "phone": "+1234567890"
-  }'
-
-# 4. Create a product
-curl -X POST http://localhost:5001/api/products \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer TOKEN" \
-  -d '{
-    "name": "Laptop Dell XPS 15",
-    "sku": "DELL-XPS-15-001",
-    "price": 1499.99,
-    "minStock": 5
-  }'
-
-# 5. Record stock movement
-curl -X POST http://localhost:5001/api/inventory/movements \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer TOKEN" \
-  -d '{
-    "productId": "PRODUCT_UUID",
-    "warehouseId": "WAREHOUSE_UUID",
-    "quantity": 50,
-    "type": "IN"
-  }'
-```
-
-## 🔧 Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| PORT | Server port | 5001 |
-| NODE_ENV | Environment mode | development |
-| DATABASE_URL | MySQL connection string | - |
-| JWT_SECRET | Secret key for JWT | - |
-| JWT_ACCESS_EXPIRES_IN | Access token expiration | 15m |
-| JWT_REFRESH_EXPIRES_IN | Refresh token expiration | 7d |
-| ALLOWED_ORIGINS | CORS allowed origins | * |
-
-## 🚦 Error Handling
-
-The API returns consistent error responses:
-
-```json
-{
-  "success": false,
-  "message": "Error message here",
-  "errors": [
-    {
-      "field": "email",
-      "message": "Email is required"
-    }
-  ]
-}
-```
-
-### Common HTTP Status Codes
-- `200` - Success
-- `201` - Created
-- `400` - Bad Request
-- `401` - Unauthorized
-- `403` - Forbidden
-- `404` - Not Found
-- `500` - Internal Server Error
-
-## 🔄 Token Refresh Flow
+## Token Refresh Flow
 
 1. User logs in and receives access token (15m) and refresh token (7d)
 2. Access token expires after 15 minutes
@@ -568,17 +445,9 @@ The API returns consistent error responses:
 4. Refresh token remains valid for 7 days
 5. On logout, refresh token is invalidated
 
-## 📝 License
+##  License
 
 ISC
-
-## 👨‍💻 Author
-
-Your Name
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome!
 
 ## ⭐ Show your support
 
