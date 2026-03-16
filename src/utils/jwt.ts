@@ -8,13 +8,13 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 export const generateAccessToken = (payload: JWTPayload): string => {
   return jwt.sign(payload, JWT_SECRET, {
     expiresIn: JWT_ACCESS_EXPIRES_IN
-  });
+  } as any);
 };
 
 export const generateRefreshToken = (payload: JWTPayload): string => {
   return jwt.sign(payload, JWT_SECRET, {
     expiresIn: JWT_REFRESH_EXPIRES_IN
-  });
+  } as any);
 };
 
 export const generateTokenPair = (payload: JWTPayload): TokenPair => {

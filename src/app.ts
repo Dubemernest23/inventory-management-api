@@ -11,6 +11,7 @@ import { supplierRoutes, warehouseRoutes, categoryRoutes, stockRoutes } from './
 import { errorHandler, notFound } from './middlewares/errorHandler';
 
 const app: Application = express();
+const appVersion = '1.0.0';
 
 // Security middleware
 app.use(helmet());
@@ -48,7 +49,7 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Inventory Management API is running',
+    message: 'Inventory Management API is running ' + `(version: ${appVersion})`,
     timestamp: new Date().toISOString()
   });
 });

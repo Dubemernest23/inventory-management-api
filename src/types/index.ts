@@ -1,29 +1,27 @@
 import { Request } from 'express';
+import { UserRole as PrismaUserRole } from '@prisma/client';
 
-export enum UserRole {
-  ADMIN = 'ADMIN',
-  MANAGER = 'MANAGER',
-  USER = 'USER'
-}
+// ✅ Re-export Prisma's generated enums
+export { UserRole, StockMovementType } from '@prisma/client';
 
-export enum StockMovementType {
-  IN = 'IN',
-  OUT = 'OUT',
-  ADJUSTMENT = 'ADJUSTMENT'
-}
+// export enum StockMovementType {
+//   IN = 'IN',
+//   OUT = 'OUT',
+//   ADJUSTMENT = 'ADJUSTMENT'
+// }
 
 export interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
-    role: UserRole;
+    role: PrismaUserRole;
   };
 }
 
 export interface JWTPayload {
   id: string;
   email: string;
-  role: UserRole;
+  role: PrismaUserRole;
 }
 
 export interface TokenPair {

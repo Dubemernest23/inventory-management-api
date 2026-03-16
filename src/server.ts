@@ -20,14 +20,19 @@ const testConnection = async () => {
 
 // Start server
 const startServer = async () => {
-  await testConnection();
+  try {
+    await testConnection();
 
-  app.listen(PORT, () => {
-    console.log(`🚀 Server is running on port ${PORT}`);
-    console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-    console.log(`📚 API Docs: http://localhost:${PORT}/api/docs`);
-  });
+    app.listen(PORT, () => {
+      console.log(`🚀 Server is running on port ${PORT}`);
+      console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+      console.log(`📚 API Docs: http://localhost:${PORT}/api/docs`);
+    }); 
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
 };
 
 startServer();

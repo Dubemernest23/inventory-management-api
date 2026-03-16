@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { UserRole, StockMovementType } from '../types';
+import { UserRole, StockMovementType } from '@prisma/client';  // ✅ Using Prisma's enum
+
 
 // Auth validation schemas
 export const registerSchema = z.object({
