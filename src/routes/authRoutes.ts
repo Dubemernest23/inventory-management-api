@@ -7,6 +7,7 @@ import {
   getProfile,
   getAllUsers
 } from '../controllers/authController';
+
 import { authenticate, authorize } from '../middlewares/auth';
 import { validate } from '../middlewares/validate';
 import { registerSchema, loginSchema, refreshTokenSchema } from '../utils/validation';

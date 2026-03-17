@@ -1,14 +1,6 @@
 import { Request } from 'express';
 import { UserRole as PrismaUserRole } from '@prisma/client';
-
-// ✅ Re-export Prisma's generated enums
 export { UserRole, StockMovementType } from '@prisma/client';
-
-// export enum StockMovementType {
-//   IN = 'IN',
-//   OUT = 'OUT',
-//   ADJUSTMENT = 'ADJUSTMENT'
-// }
 
 export interface AuthRequest extends Request {
   user?: {

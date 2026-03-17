@@ -7,7 +7,7 @@ import { sendError, sendSuccess } from '../utils/response';
 
 export const register = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role} = req.body;
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -62,17 +62,22 @@ export const login = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
+    if(!email || !password){
+      sendError(res, 400, "Only Email and password are required")
+      return;
+    }
+
     // Find user
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      sendError(res, 401, 'Invalid email or password');
+      sendError(res, 401, 'Invalid credential(s)');
       return;
     }
 
     // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      sendError(res, 401, 'Invalid email or password');
+      sendError(res, 401, 'Invalid credential(s)');
       return;
     }
 
