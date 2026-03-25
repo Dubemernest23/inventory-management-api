@@ -1,5 +1,7 @@
 import { Response } from 'express';
+import { handleControllerError } from '../__helper__/handleControllerError';
 import { AuthRequest } from '../types';
+import { getBusinessContext } from '../__helper__/getBusinessContext';
 import {
   createCategoryService,
   createStockMovementService,
@@ -15,26 +17,17 @@ import {
   updateCategoryService,
   updateWarehouseService
 } from '../services/inventoryService';
-import { AppError, sendError, sendSuccess } from '../utils/response';
-
-const handleControllerError = (res: Response, error: unknown, fallbackMessage: string): void => {
-  if (error instanceof AppError) {
-    sendError(res, error.statusCode, error.message);
-    return;
-  }
-
-  if (error instanceof Error) {
-    sendError(res, 500, error.message || fallbackMessage);
-    return;
-  }
-
-  sendError(res, 500, fallbackMessage);
-};
+import { sendError, sendSuccess } from '../utils/response';
 
 // ==================== WAREHOUSE CONTROLLER ====================
 export const createWarehouse = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const warehouse = await createWarehouseService(req.body);
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
+    const warehouse = await createWarehouseService(business.id, req.body);
     sendSuccess(res, 201, 'Warehouse created successfully', { warehouse });
   } catch (error: unknown) {
     handleControllerError(res, error, 'Error creating warehouse');
@@ -43,7 +36,12 @@ export const createWarehouse = async (req: AuthRequest, res: Response): Promise<
 
 export const getAllWarehouses = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const warehouses = await getAllWarehousesService();
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
+    const warehouses = await getAllWarehousesService(business.id);
     sendSuccess(res, 200, 'Warehouses retrieved successfully', { warehouses, count: warehouses.length });
   } catch (error: unknown) {
     handleControllerError(res, error, 'Error fetching warehouses');
@@ -52,8 +50,13 @@ export const getAllWarehouses = async (req: AuthRequest, res: Response): Promise
 
 export const getWarehouseById = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
     const { warehouseId } = req.params;
-    const warehouse = await getWarehouseByIdService(warehouseId);
+    const warehouse = await getWarehouseByIdService(business.id, warehouseId);
     sendSuccess(res, 200, 'Warehouse retrieved successfully', { warehouse });
   } catch (error: unknown) {
     handleControllerError(res, error, 'Error fetching warehouse');
@@ -62,8 +65,13 @@ export const getWarehouseById = async (req: AuthRequest, res: Response): Promise
 
 export const updateWarehouse = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
     const { warehouseId } = req.params;
-    const warehouse = await updateWarehouseService(warehouseId, req.body);
+    const warehouse = await updateWarehouseService(business.id, warehouseId, req.body);
     sendSuccess(res, 200, 'Warehouse updated successfully', { warehouse });
   } catch (error: unknown) {
     handleControllerError(res, error, 'Error updating warehouse');
@@ -72,8 +80,13 @@ export const updateWarehouse = async (req: AuthRequest, res: Response): Promise<
 
 export const deleteWarehouse = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
     const { warehouseId } = req.params;
-    await deleteWarehouseService(warehouseId);
+    await deleteWarehouseService(business.id, warehouseId);
     sendSuccess(res, 200, 'Warehouse deleted successfully', null);
   } catch (error: unknown) {
     handleControllerError(res, error, 'Error deleting warehouse');
@@ -83,7 +96,12 @@ export const deleteWarehouse = async (req: AuthRequest, res: Response): Promise<
 // ==================== CATEGORY CONTROLLER ====================
 export const createCategory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const category = await createCategoryService(req.body);
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
+    const category = await createCategoryService(business.id, req.body);
     sendSuccess(res, 201, 'Category created successfully', { category });
   } catch (error: unknown) {
     handleControllerError(res, error, 'Error creating category');
@@ -92,7 +110,12 @@ export const createCategory = async (req: AuthRequest, res: Response): Promise<v
 
 export const getAllCategories = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const categories = await getAllCategoriesService();
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
+    const categories = await getAllCategoriesService(business.id);
     sendSuccess(res, 200, 'Categories retrieved successfully', { categories, count: categories.length });
   } catch (error: unknown) {
     handleControllerError(res, error, 'Error fetching categories');
@@ -101,8 +124,13 @@ export const getAllCategories = async (req: AuthRequest, res: Response): Promise
 
 export const updateCategory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
     const { categoryId } = req.params;
-    const category = await updateCategoryService(categoryId, req.body);
+    const category = await updateCategoryService(business.id, categoryId, req.body);
     sendSuccess(res, 200, 'Category updated successfully', { category });
   } catch (error: unknown) {
     handleControllerError(res, error, 'Error updating category');
@@ -111,8 +139,13 @@ export const updateCategory = async (req: AuthRequest, res: Response): Promise<v
 
 export const deleteCategory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
     const { categoryId } = req.params;
-    await deleteCategoryService(categoryId);
+    await deleteCategoryService(business.id, categoryId);
     sendSuccess(res, 200, 'Category deleted successfully', null);
   } catch (error: unknown) {
     handleControllerError(res, error, 'Error deleting category');
@@ -122,12 +155,17 @@ export const deleteCategory = async (req: AuthRequest, res: Response): Promise<v
 // ==================== STOCK MOVEMENT CONTROLLER ====================
 export const createStockMovement = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
     if (!req.user) {
       sendError(res, 401, 'Not authenticated');
       return;
     }
 
-    const data = await createStockMovementService(req.body, req.user.id);
+    const data = await createStockMovementService(business.id, req.body, req.user.id);
 
     sendSuccess(res, 201, 'Stock movement recorded successfully', {
       ...data
@@ -139,7 +177,15 @@ export const createStockMovement = async (req: AuthRequest, res: Response): Prom
 
 export const getAllStockMovements = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const data = await getAllStockMovementsService(req.query as Record<string, string | undefined>);
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
+    const data = await getAllStockMovementsService(
+      business.id,
+      req.query as Record<string, string | undefined>
+    );
 
     sendSuccess(res, 200, 'Stock movements retrieved successfully', {
       ...data
@@ -151,8 +197,13 @@ export const getAllStockMovements = async (req: AuthRequest, res: Response): Pro
 
 export const getInventoryByWarehouse = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
     const { warehouseId } = req.params;
-    const data = await getInventoryByWarehouseService(warehouseId);
+    const data = await getInventoryByWarehouseService(business.id, warehouseId);
 
     sendSuccess(res, 200, 'Inventory retrieved successfully', { ...data });
   } catch (error: unknown) {
@@ -162,7 +213,12 @@ export const getInventoryByWarehouse = async (req: AuthRequest, res: Response): 
 
 export const getStockReport = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const data = await getStockReportService();
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
+    const data = await getStockReportService(business.id);
 
     sendSuccess(res, 200, 'Stock report generated successfully', {
       ...data

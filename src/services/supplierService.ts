@@ -8,17 +8,23 @@ interface GetAllSuppliersParams {
   search?: string;
 }
 
-export const createSupplierService = async (supplierData: Prisma.SupplierUncheckedCreateInput) => {
+export const createSupplierService = async (
+  businessId: string,
+  supplierData: Prisma.SupplierUncheckedCreateInput
+) => {
   return prisma.supplier.create({
-    data: supplierData
+    data: {
+      ...supplierData,
+      businessId
+    }
   });
 };
 
-export const getAllSuppliersService = async (params: GetAllSuppliersParams) => {
+export const getAllSuppliersService = async (businessId: string, params: GetAllSuppliersParams) => {
   const { page = 1, limit = 10, search } = params;
   const skip = (Number(page) - 1) * Number(limit);
 
-  const where: Prisma.SupplierWhereInput = {};
+  const where: Prisma.SupplierWhereInput = { businessId };
   if (search) {
     where.OR = [{ name: { contains: search } }, { email: { contains: search } }];
   }
@@ -49,9 +55,12 @@ export const getAllSuppliersService = async (params: GetAllSuppliersParams) => {
   };
 };
 
-export const getSupplierByIdService = async (supplierId: string) => {
-  const supplier = await prisma.supplier.findUnique({
-    where: { id: supplierId },
+export const getSupplierByIdService = async (businessId: string, supplierId: string) => {
+  const supplier = await prisma.supplier.findFirst({
+    where: {
+      id: supplierId,
+      businessId
+    },
     include: {
       products: true
     }
@@ -65,17 +74,42 @@ export const getSupplierByIdService = async (supplierId: string) => {
 };
 
 export const updateSupplierService = async (
+  businessId: string,
   supplierId: string,
   updateData: Prisma.SupplierUncheckedUpdateInput
 ) => {
+  const existingSupplier = await prisma.supplier.findFirst({
+    where: {
+      id: supplierId,
+      businessId
+    },
+    select: { id: true }
+  });
+
+  if (!existingSupplier) {
+    throw new AppError('Supplier not found', 404);
+  }
+
   return prisma.supplier.update({
-    where: { id: supplierId },
+    where: { id: existingSupplier.id },
     data: updateData
   });
 };
 
-export const deleteSupplierService = async (supplierId: string) => {
+export const deleteSupplierService = async (businessId: string, supplierId: string) => {
+  const existingSupplier = await prisma.supplier.findFirst({
+    where: {
+      id: supplierId,
+      businessId
+    },
+    select: { id: true }
+  });
+
+  if (!existingSupplier) {
+    throw new AppError('Supplier not found', 404);
+  }
+
   await prisma.supplier.delete({
-    where: { id: supplierId }
+    where: { id: existingSupplier.id }
   });
 };

@@ -1,12 +1,16 @@
 import { Request } from 'express';
-import { UserRole as PrismaUserRole } from '@prisma/client';
-export { UserRole, StockMovementType } from '@prisma/client';
+import { BusinessRole as PrismaBusinessRole, UserRole as PrismaUserRole } from '@prisma/client';
+export { BusinessRole, CostingMethod, StockMovementType, SubscriptionTier, UserRole } from '@prisma/client';
 
 export interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
     role: PrismaUserRole;
+  };
+  business?: {
+    id: string;
+    role: PrismaBusinessRole;
   };
 }
 

@@ -1,454 +1,182 @@
-# Inventory Management API
+# VendorFlow API
 
-A comprehensive RESTful API built with TypeScript, Express, Prisma ORM, and MySQL featuring role-based access control, refresh tokens, suppliers, warehouses, and advanced stock management.
+VendorFlow is a multi-tenant inventory management API for online vendors, built with Node.js, TypeScript, Express, Prisma, and MySQL.
 
-## Features
+## Current Scope
 
-- **Authentication & Authorization**
-  - JWT-based authentication with access and refresh tokens
-  - Role-based access control (Admin, Manager, User)
-  - Secure password hashing with bcrypt
-  - Token refresh mechanism for seamless user experience
+- Batch 1 implemented:
+  - Multi-tenancy foundation
+  - Business/team membership and invitation flows
+  - Tenant-scoped inventory, products, suppliers, categories, warehouses, and stock movement APIs
+- Batch 2 started:
+  - Product variants and images endpoints added
+  - FIFO/LIFO inventory layer consumption added to stock-out flow
 
-- **Product Management**
-  - Complete CRUD operations for products
-  - SKU and barcode tracking
-  - Price and cost price management
-  - Low stock alerts and tracking
-  - Product categorization
+## Tech Stack
 
-- **Supplier Management**
-  - Manage supplier information and contacts
-  - Track products by supplier
-  - Supplier relationship management
+- Node.js + TypeScript
+- Express.js
+- Prisma ORM
+- MySQL
+- JWT + bcryptjs
+- Zod validation
 
-- **Warehouse Management**
-  - Multi-warehouse inventory support
-  - Location-based stock tracking
-  - Capacity management
-  - Warehouse-specific inventory reports
+## Setup
 
-- **Stock Management**
-  - Real-time inventory tracking
-  - Stock movements (IN, OUT, ADJUSTMENT)
-  - Movement history and audit trail
-  - Low stock alerts
-  - Comprehensive stock reports
+1. Install dependencies:
 
-- **Reporting & Analytics**
-  - Stock value calculations
-  - Inventory reports by warehouse
-  - Stock movement history
-  - Low stock product alerts
-
-- **API Documentation**
-  - Interactive Swagger/OpenAPI documentation
-  - Complete endpoint descriptions
-  - Request/response examples
-
-## Prerequisites
-
-- Node.js (v16 or higher)
-- MySQL (v8.0 or higher)
-- npm or yarn
-
-##  Installation
-
-1. **Clone the repository**
-```bash
-git clone <repository-url>
-cd inventory-management-api
-```
-
-2. **Install dependencies**
 ```bash
 npm install
 ```
 
-3. **Environment setup**
+2. Configure environment:
+
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` file with your configuration:
-```env
-PORT=5001
-NODE_ENV=development
-DATABASE_URL="mysql://root:password@localhost:3306/inventory_management"
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-JWT_ACCESS_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=7d
-ALLOWED_ORIGINS=http://localhost:3000
-```
+3. Generate Prisma client:
 
-4. **Setup database**
 ```bash
-# Generate Prisma Client
 npm run prisma:generate
-
-# Run database migrations
-npm run prisma:migrate
-
-# Optional: Open Prisma Studio to view data
-npm run prisma:studio
 ```
 
-5. **Run the application**
+4. Run app:
+
 ```bash
-# Development mode with auto-reload
 npm run dev
+```
 
-# Production build
+Build:
+
+```bash
 npm run build
-npm start
 ```
 
-## 📚 API Documentation
+## Authentication
 
-### Swagger Documentation
-Once the server is running, access the interactive API documentation at:
-```
-http://localhost:5001/api/docs
-```
+- Auth uses Bearer JWT:
+  - `Authorization: Bearer <access-token>`
+- Tenant-scoped endpoints require:
+  - `x-business-id: <business-uuid>`
 
-### Base URL
-```
-http://localhost:5001/api
-```
+## Base URL
 
-### Authentication Endpoints
+`http://localhost:5001/api`
 
-#### Register User
-```http
-POST /api/auth/register
-Content-Type: application/json
+## Endpoints
 
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "password123",
-  "role": "USER"
-}
-```
+### Auth
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "User registered successfully",
-  "data": {
-    "user": {
-      "id": "uuid",
-      "name": "John Doe",
-      "email": "john@example.com",
-      "role": "USER"
-    },
-    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
-  }
-}
-```
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh-token`
+- `POST /auth/logout`
+- `GET /auth/profile`
+- `GET /auth/users` (global roles: `ADMIN`, `MANAGER`)
 
-#### Login
-```http
-POST /api/auth/login
-Content-Type: application/json
+### Businesses (Batch 1)
 
-{
-  "email": "john@example.com",
-  "password": "password123"
-}
-```
+All require authentication.
 
-#### Refresh Token
-```http
-POST /api/auth/refresh-token
-Content-Type: application/json
+- `GET /businesses`
+  - List current user's businesses and roles.
+- `POST /businesses`
+  - Create business and assign current user as `OWNER`.
+  - Body:
+    - `name` (required)
+    - `industryType`, `address`, `currency`, `timezone`, `costingMethod`, `subscriptionTier`, `logoUrl`
+- `POST /businesses/invitations/accept`
+  - Accept invite token.
+  - Body: `{ "token": "..." }`
+- `GET /businesses/:businessId/members`
+  - List active members.
+- `POST /businesses/:businessId/invitations`
+  - Invite/add member.
+  - Body: `{ "email": "...", "role": "OWNER|MANAGER|STAFF", "expiresInHours"?: number }`
+- `PATCH /businesses/:businessId/members/:memberUserId/role`
+  - Update member role (owner-only logic enforced in service).
+- `PATCH /businesses/:businessId/members/:memberUserId/deactivate`
+  - Deactivate member (owner-only logic enforced in service).
 
-{
-  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
-}
-```
+### Products (Tenant-scoped)
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Token refreshed successfully",
-  "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIs..."
-  }
-}
-```
+All require:
 
-#### Logout
-```http
-POST /api/auth/logout
-Authorization: Bearer <access-token>
-```
+- `Authorization` header
+- `x-business-id` header
 
-### Product Endpoints
+Endpoints:
 
-#### Create Product (Admin/Manager only)
-```http
-POST /api/products
-Authorization: Bearer <access-token>
-Content-Type: application/json
+- `GET /products`
+- `GET /products/low-stock`
+- `GET /products/:productId`
+- `POST /products` (`OWNER`, `MANAGER`)
+- `PATCH /products/:productId` (`OWNER`, `MANAGER`)
+- `DELETE /products/:productId` (`OWNER`)
+- `GET /products/:productId/variants`
+- `POST /products/:productId/variants` (`OWNER`, `MANAGER`)
+- `PATCH /products/:productId/variants/:variantId` (`OWNER`, `MANAGER`)
+- `DELETE /products/:productId/variants/:variantId` (`OWNER`, `MANAGER`)
+- `GET /products/:productId/images`
+- `POST /products/:productId/images` (`OWNER`, `MANAGER`)
+- `PATCH /products/:productId/images/:imageId` (`OWNER`, `MANAGER`)
+- `DELETE /products/:productId/images/:imageId` (`OWNER`, `MANAGER`)
 
-{
-  "name": "Laptop Dell XPS 15",
-  "sku": "DELL-XPS-15-001",
-  "barcode": "1234567890123",
-  "description": "High-performance laptop",
-  "price": 1499.99,
-  "costPrice": 1200.00,
-  "minStock": 5,
-  "categoryId": "uuid",
-  "supplierId": "uuid"
-}
-```
+### Suppliers (Tenant-scoped)
 
-#### Get All Products
-```http
-GET /api/products?page=1&limit=10&search=laptop&categoryId=uuid&lowStock=true
-Authorization: Bearer <access-token>
-```
+- `GET /suppliers`
+- `GET /suppliers/:supplierId`
+- `POST /suppliers` (`OWNER`, `MANAGER`)
+- `PATCH /suppliers/:supplierId` (`OWNER`, `MANAGER`)
+- `DELETE /suppliers/:supplierId` (`OWNER`)
 
-#### Get Product by ID
-```http
-GET /api/products/:productId
-Authorization: Bearer <access-token>
-```
+### Warehouses (Tenant-scoped)
 
-#### Get Low Stock Products
-```http
-GET /api/products/low-stock
-Authorization: Bearer <access-token>
-```
+- `GET /warehouses`
+- `GET /warehouses/:warehouseId`
+- `POST /warehouses` (`OWNER`, `MANAGER`)
+- `PATCH /warehouses/:warehouseId` (`OWNER`, `MANAGER`)
+- `DELETE /warehouses/:warehouseId` (`OWNER`)
 
-#### Update Product (Admin/Manager only)
-```http
-PATCH /api/products/:productId
-Authorization: Bearer <access-token>
-Content-Type: application/json
+### Categories (Tenant-scoped)
 
-{
-  "price": 1399.99,
-  "minStock": 10
-}
-```
+- `GET /categories`
+- `POST /categories` (`OWNER`, `MANAGER`)
+- `PATCH /categories/:categoryId` (`OWNER`, `MANAGER`)
+- `DELETE /categories/:categoryId` (`OWNER`)
 
-#### Delete Product (Admin only)
-```http
-DELETE /api/products/:productId
-Authorization: Bearer <access-token>
-```
+### Inventory (Tenant-scoped)
 
-### Supplier Endpoints
+- `GET /inventory/movements`
+- `POST /inventory/movements`
+- `GET /inventory/warehouse/:warehouseId`
+- `GET /inventory/report` (`OWNER`, `MANAGER`)
 
-#### Create Supplier (Admin/Manager only)
-```http
-POST /api/suppliers
-Authorization: Bearer <access-token>
-Content-Type: application/json
+`POST /inventory/movements` now supports:
 
-{
-  "name": "Tech Supplies Inc",
-  "email": "contact@techsupplies.com",
-  "phone": "+1234567890",
-  "address": "123 Tech Street, Silicon Valley",
-  "description": "Leading technology supplier"
-}
-```
+- `variantId` (optional)
+- `reason` (optional)
+- `unitCost` (recommended for `IN`/`ADJUSTMENT`)
 
-#### Get All Suppliers
-```http
-GET /api/suppliers?page=1&limit=10&search=tech
-Authorization: Bearer <access-token>
-```
+Costing behavior:
 
-#### Get Supplier by ID
-```http
-GET /api/suppliers/:supplierId
-Authorization: Bearer <access-token>
-```
+- Inbound stock creates an `inventory_layers` entry.
+- Stock-out consumes layers based on business `costingMethod`:
+  - `FIFO`: oldest layer first
+  - `LIFO`: newest layer first
+- Calculated COGS is stored on the stock movement.
 
-### Warehouse Endpoints
+## Business Role Model
 
-#### Create Warehouse (Admin/Manager only)
-```http
-POST /api/warehouses
-Authorization: Bearer <access-token>
-Content-Type: application/json
+- `OWNER`
+  - Full business control (team and settings).
+- `MANAGER`
+  - Operational management.
+- `STAFF`
+  - Day-to-day operations with reduced permissions.
 
-{
-  "name": "Main Warehouse",
-  "location": "New York, NY",
-  "capacity": 10000,
-  "description": "Primary storage facility"
-}
-```
+## Notes
 
-#### Get All Warehouses
-```http
-GET /api/warehouses
-Authorization: Bearer <access-token>
-```
-
-#### Get Warehouse by ID
-```http
-GET /api/warehouses/:warehouseId
-Authorization: Bearer <access-token>
-```
-
-### Category Endpoints
-
-#### Create Category (Admin/Manager only)
-```http
-POST /api/categories
-Authorization: Bearer <access-token>
-Content-Type: application/json
-
-{
-  "name": "Electronics",
-  "description": "Electronic devices and accessories"
-}
-```
-
-#### Get All Categories
-```http
-GET /api/categories
-Authorization: Bearer <access-token>
-```
-
-### Stock Management Endpoints
-
-#### Record Stock Movement
-```http
-POST /api/inventory/movements
-Authorization: Bearer <access-token>
-Content-Type: application/json
-
-{
-  "productId": "uuid",
-  "warehouseId": "uuid",
-  "quantity": 50,
-  "type": "IN",
-  "notes": "New stock arrival from supplier"
-}
-```
-
-**Stock Movement Types:**
-- `IN`: Stock incoming (purchase, return)
-- `OUT`: Stock outgoing (sale, damage)
-- `ADJUSTMENT`: Manual adjustment
-
-#### Get All Stock Movements
-```http
-GET /api/inventory/movements?page=1&limit=20&productId=uuid&type=IN
-Authorization: Bearer <access-token>
-```
-
-#### Get Inventory by Warehouse
-```http
-GET /api/inventory/warehouse/:warehouseId
-Authorization: Bearer <access-token>
-```
-
-#### Get Stock Report (Admin/Manager only)
-```http
-GET /api/inventory/report
-Authorization: Bearer <access-token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Stock report generated successfully",
-  "data": {
-    "report": [
-      {
-        "id": "uuid",
-        "name": "Laptop Dell XPS 15",
-        "sku": "DELL-XPS-15-001",
-        "totalStock": 45,
-        "minStock": 5,
-        "isLowStock": false,
-        "price": 1499.99,
-        "stockValue": 67499.55,
-        "warehouseBreakdown": [
-          {
-            "warehouse": "Main Warehouse",
-            "quantity": 30
-          },
-          {
-            "warehouse": "Secondary Warehouse",
-            "quantity": 15
-          }
-        ]
-      }
-    ],
-    "summary": {
-      "totalProducts": 150,
-      "totalStockValue": 458750.00,
-      "lowStockProducts": 12
-    }
-  }
-}
-```
-
-##  Project Structure
-
-```
-inventory-management-api/
-├── prisma/
-│   └── schema.prisma
-├── src/
-│   ├── config/
-│   │   ├── database.ts
-│   │   └── swagger.ts
-│   ├── controllers/
-│   │   ├── authController.ts
-│   │   ├── productController.ts
-│   │   ├── supplierController.ts
-│   │   └── inventoryController.ts
-│   ├── middlewares/
-│   │   ├── auth.ts
-│   │   ├── validate.ts
-│   │   └── errorHandler.ts
-│   ├── routes/
-│   │   ├── authRoutes.ts
-│   │   ├── productRoutes.ts
-│   │   └── index.ts
-│   ├── types/
-│   │   └── index.ts
-│   ├── utils/
-│   │   ├── jwt.ts
-│   │   ├── response.ts
-│   │   └── validation.ts
-│   ├── app.ts
-│   └── server.ts
-├── .env.example
-├── .gitignore
-├── nodemon.json
-├── package.json
-├── tsconfig.json
-└── README.md
-```
-
-## Token Refresh Flow
-
-1. User logs in and receives access token (15m) and refresh token (7d)
-2. Access token expires after 15 minutes
-3. Client uses refresh token to get new access token
-4. Refresh token remains valid for 7 days
-5. On logout, refresh token is invalidated
-
-##  License
-
-ISC
-
-## ⭐ Show your support
-
-Give a ⭐️ if this project helped you!
+- Migrations are now tracked in `prisma/migrations`.
+- Tenant isolation is enforced in service-level Prisma queries via `businessId`.

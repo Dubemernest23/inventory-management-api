@@ -8,7 +8,6 @@ interface RegisterUserInput {
   name: string;
   email: string;
   password: string;
-  role?: UserRole;
 }
 
 interface LoginUserInput {
@@ -16,7 +15,7 @@ interface LoginUserInput {
   password: string;
 }
 
-export const registerUser = async ({ name, email, password, role }: RegisterUserInput) => {
+export const registerUser = async ({ name, email, password }: RegisterUserInput) => {
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) {
     throw new AppError('User with this email already exists', 400);
@@ -29,7 +28,7 @@ export const registerUser = async ({ name, email, password, role }: RegisterUser
       name,
       email,
       password: hashedPassword,
-      role: role ?? UserRole.USER
+      role: UserRole.USER
     },
     select: {
       id: true,

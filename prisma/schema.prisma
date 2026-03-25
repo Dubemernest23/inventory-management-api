@@ -15,6 +15,28 @@ enum UserRole {
   USER
 }
 
+enum BusinessRole {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum CostingMethod {
+  FIFO
+  LIFO
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  DISCONTINUED
+}
+
 enum StockMovementType {
   IN
   OUT
@@ -32,12 +54,100 @@ model User {
   updatedAt    DateTime  @updatedAt
 
   stockMovements StockMovement[]
+  businessRoles  UserBusinessRole[]
+  invitedMembers UserBusinessRole[] @relation("MembershipInviter")
+  sentInvitations TeamInvitation[]  @relation("InvitationSender")
+  activityLogs    ActivityLog[]
   
   @@map("users")
 }
 
+model Business {
+  id               String           @id @default(uuid())
+  name             String
+  industryType     String?
+  address          String?          @db.Text
+  currency         String           @default("USD")
+  timezone         String           @default("UTC")
+  costingMethod    CostingMethod    @default(FIFO)
+  subscriptionTier SubscriptionTier @default(FREE)
+  logoUrl          String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  members        UserBusinessRole[]
+  invitations    TeamInvitation[]
+  activityLogs   ActivityLog[]
+  suppliers      Supplier[]
+  warehouses     Warehouse[]
+  categories     Category[]
+  products       Product[]
+  variants       ProductVariant[]
+  inventories    Inventory[]
+  stockMovements StockMovement[]
+  inventoryLayers InventoryLayer[]
+
+  @@map("businesses")
+}
+
+model UserBusinessRole {
+  id         String       @id @default(uuid())
+  userId     String
+  businessId String
+  role       BusinessRole @default(STAFF)
+  isActive   Boolean      @default(true)
+  invitedBy  String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  inviter  User?    @relation("MembershipInviter", fields: [invitedBy], references: [id], onDelete: SetNull)
+
+  @@unique([userId, businessId])
+  @@index([businessId, role, isActive])
+  @@map("user_business_roles")
+}
+
+model TeamInvitation {
+  id          String       @id @default(uuid())
+  businessId  String
+  email       String
+  role        BusinessRole
+  token       String       @unique
+  invitedById String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime     @default(now())
+
+  business  Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invitedBy User     @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([businessId, email])
+  @@map("team_invitations")
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  businessId String
+  userId     String?
+  action     String
+  entity     String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, createdAt])
+  @@map("activity_logs")
+}
+
 model Supplier {
   id          String   @id @default(uuid())
+  businessId  String
   name        String
   email       String?
   phone       String?
@@ -46,13 +156,17 @@ model Supplier {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   products Product[]
+
+  @@index([businessId])
   
   @@map("suppliers")
 }
 
 model Warehouse {
   id          String   @id @default(uuid())
+  businessId  String
   name        String
   location    String
   capacity    Int?
@@ -60,72 +174,175 @@ model Warehouse {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  inventories Inventory[]
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  inventories    Inventory[]
+  stockMovements StockMovement[]
+  inventoryLayers InventoryLayer[]
+
+  @@index([businessId])
   
   @@map("warehouses")
 }
 
 model Category {
   id          String   @id @default(uuid())
-  name        String   @unique
+  businessId  String
+  name        String
   description String?  @db.Text
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   products Product[]
+
+  @@unique([businessId, name])
+  @@index([businessId])
   
   @@map("categories")
 }
 
 model Product {
   id          String   @id @default(uuid())
+  businessId  String
   name        String
-  sku         String   @unique
-  barcode     String?  @unique
+  sku         String
+  barcode     String?
   description String?  @db.Text
+  tags        Json?
+  status      ProductStatus @default(ACTIVE)
   price       Decimal  @db.Decimal(10, 2)
   costPrice   Decimal? @db.Decimal(10, 2)
   minStock    Int      @default(10)
+  reorderPoint Int?
   categoryId  String?
   supplierId  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  business      Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
   category       Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   supplier       Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   inventories    Inventory[]
   stockMovements StockMovement[]
+  variants       ProductVariant[]
+  images         ProductImage[]
+  inventoryLayers InventoryLayer[]
+
+  @@unique([businessId, sku])
+  @@unique([businessId, barcode])
+  @@index([businessId])
   
   @@map("products")
 }
 
+model ProductVariant {
+  id           String        @id @default(uuid())
+  businessId   String
+  productId    String
+  name         String
+  sku          String
+  barcode      String?
+  attributes   Json
+  status       ProductStatus @default(ACTIVE)
+  price        Decimal?      @db.Decimal(10, 2)
+  costPrice    Decimal?      @db.Decimal(10, 2)
+  minStock     Int           @default(0)
+  reorderPoint Int?
+  stockQty     Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  business       Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  product        Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockMovements StockMovement[]
+  inventoryLayers InventoryLayer[]
+
+  @@unique([businessId, sku])
+  @@unique([businessId, barcode])
+  @@index([businessId, productId])
+  @@map("product_variants")
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  url       String
+  altText   String?
+  sortOrder Int      @default(0)
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+  @@map("product_images")
+}
+
 model Inventory {
   id          String   @id @default(uuid())
+  businessId  String
   productId   String
   warehouseId String
   quantity    Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  business  Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
 
-  @@unique([productId, warehouseId])
+  @@unique([businessId, productId, warehouseId])
+  @@index([businessId])
   @@map("inventory")
 }
 
 model StockMovement {
   id          String             @id @default(uuid())
+  businessId  String
   productId   String
+  variantId   String?
   quantity    Int
   type        StockMovementType
   warehouseId String
   userId      String
+  reason      String?
+  unitCost    Decimal?           @db.Decimal(10, 2)
+  cogs        Decimal?           @db.Decimal(10, 2)
   notes       String?            @db.Text
   createdAt   DateTime           @default(now())
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business  Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
+  @@index([businessId])
+  @@index([businessId, variantId])
   @@map("stock_movements")
+}
+
+model InventoryLayer {
+  id           String   @id @default(uuid())
+  businessId   String
+  productId    String
+  variantId    String?
+  warehouseId  String
+  quantity     Int
+  qtyRemaining Int
+  costPrice    Decimal  @db.Decimal(10, 2)
+  receivedAt   DateTime @default(now())
+  sourceType   String?
+  sourceId     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  business  Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  warehouse Warehouse       @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, productId, warehouseId, receivedAt])
+  @@index([businessId, variantId, warehouseId, receivedAt])
+  @@map("inventory_layers")
 }

@@ -4,12 +4,13 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Inventory Management API',
+      title: 'VendorFlow API',
       version: '1.0.0',
-      description: 'A comprehensive inventory management API with role-based access control, suppliers, warehouses, and stock tracking',
+      description:
+        'VendorFlow multi-tenant inventory management API with business/team roles, product variants, and FIFO/LIFO stock costing layers.',
       contact: {
-        name: 'API Support',
-        email: 'support@inventoryapi.com'
+        name: 'VendorFlow',
+        email: 'support@vendorflow.local'
       }
     },
     servers: [
@@ -42,15 +43,60 @@ const options: swaggerJsdoc.Options = {
           type: 'object',
           properties: {
             id: { type: 'string', format: 'uuid' },
+            businessId: { type: 'string', format: 'uuid' },
             name: { type: 'string' },
             sku: { type: 'string' },
             barcode: { type: 'string' },
             description: { type: 'string' },
+            status: { type: 'string', enum: ['ACTIVE', 'INACTIVE', 'DISCONTINUED'] },
+            reorderPoint: { type: 'integer' },
+            tags: { type: 'object' },
             price: { type: 'number' },
             costPrice: { type: 'number' },
             minStock: { type: 'integer' },
             categoryId: { type: 'string', format: 'uuid' },
             supplierId: { type: 'string', format: 'uuid' }
+          }
+        },
+        ProductVariant: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            productId: { type: 'string', format: 'uuid' },
+            businessId: { type: 'string', format: 'uuid' },
+            name: { type: 'string' },
+            sku: { type: 'string' },
+            barcode: { type: 'string' },
+            attributes: { type: 'object' },
+            status: { type: 'string', enum: ['ACTIVE', 'INACTIVE', 'DISCONTINUED'] },
+            price: { type: 'number' },
+            costPrice: { type: 'number' },
+            minStock: { type: 'integer' },
+            reorderPoint: { type: 'integer' },
+            stockQty: { type: 'integer' }
+          }
+        },
+        ProductImage: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            productId: { type: 'string', format: 'uuid' },
+            url: { type: 'string' },
+            altText: { type: 'string' },
+            sortOrder: { type: 'integer' },
+            isPrimary: { type: 'boolean' }
+          }
+        },
+        Business: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string' },
+            industryType: { type: 'string' },
+            currency: { type: 'string' },
+            timezone: { type: 'string' },
+            costingMethod: { type: 'string', enum: ['FIFO', 'LIFO'] },
+            subscriptionTier: { type: 'string', enum: ['FREE', 'PRO'] }
           }
         },
         Supplier: {
@@ -86,10 +132,15 @@ const options: swaggerJsdoc.Options = {
           type: 'object',
           properties: {
             id: { type: 'string', format: 'uuid' },
+            businessId: { type: 'string', format: 'uuid' },
             productId: { type: 'string', format: 'uuid' },
+            variantId: { type: 'string', format: 'uuid' },
             warehouseId: { type: 'string', format: 'uuid' },
             quantity: { type: 'integer' },
             type: { type: 'string', enum: ['IN', 'OUT', 'ADJUSTMENT'] },
+            reason: { type: 'string' },
+            unitCost: { type: 'number' },
+            cogs: { type: 'number' },
             notes: { type: 'string' },
             createdAt: { type: 'string', format: 'date-time' }
           }

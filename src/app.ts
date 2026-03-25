@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger';
 import authRoutes from './routes/authRoutes';
+import businessRoutes from './routes/businessRoutes';
 import productRoutes from './routes/productRoutes';
 import { supplierRoutes, warehouseRoutes, categoryRoutes, stockRoutes } from './routes/index';
 import { errorHandler, notFound } from './middlewares/errorHandler';
@@ -56,6 +57,7 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/businesses', businessRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/warehouses', warehouseRoutes);

@@ -27,4 +27,4 @@ Thumbs.db
 coverage/
 
 # Prisma
-prisma/migrations/
+# Keep migrations committed for reproducible schema changes.

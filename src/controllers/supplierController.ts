@@ -1,5 +1,7 @@
 import { Response } from 'express';
+import { handleControllerError } from '../__helper__/handleControllerError';
 import { AuthRequest } from '../types';
+import { getBusinessContext } from '../__helper__/getBusinessContext';
 import {
   createSupplierService,
   deleteSupplierService,
@@ -7,25 +9,16 @@ import {
   getSupplierByIdService,
   updateSupplierService
 } from '../services/supplierService';
-import { AppError, sendError, sendSuccess } from '../utils/response';
-
-const handleControllerError = (res: Response, error: unknown, fallbackMessage: string): void => {
-  if (error instanceof AppError) {
-    sendError(res, error.statusCode, error.message);
-    return;
-  }
-
-  if (error instanceof Error) {
-    sendError(res, 500, error.message || fallbackMessage);
-    return;
-  }
-
-  sendError(res, 500, fallbackMessage);
-};
+import { sendSuccess } from '../utils/response';
 
 export const createSupplier = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const supplier = await createSupplierService(req.body);
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
+    const supplier = await createSupplierService(business.id, req.body);
 
     sendSuccess(res, 201, 'Supplier created successfully', { supplier });
   } catch (error: unknown) {
@@ -35,7 +28,15 @@ export const createSupplier = async (req: AuthRequest, res: Response): Promise<v
 
 export const getAllSuppliers = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const data = await getAllSuppliersService(req.query as Record<string, string | undefined>);
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
+    const data = await getAllSuppliersService(
+      business.id,
+      req.query as Record<string, string | undefined>
+    );
 
     sendSuccess(res, 200, 'Suppliers retrieved successfully', {
       ...data
@@ -47,8 +48,13 @@ export const getAllSuppliers = async (req: AuthRequest, res: Response): Promise<
 
 export const getSupplierById = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
     const { supplierId } = req.params;
-    const supplier = await getSupplierByIdService(supplierId);
+    const supplier = await getSupplierByIdService(business.id, supplierId);
 
     sendSuccess(res, 200, 'Supplier retrieved successfully', { supplier });
   } catch (error: unknown) {
@@ -58,8 +64,13 @@ export const getSupplierById = async (req: AuthRequest, res: Response): Promise<
 
 export const updateSupplier = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
     const { supplierId } = req.params;
-    const supplier = await updateSupplierService(supplierId, req.body);
+    const supplier = await updateSupplierService(business.id, supplierId, req.body);
 
     sendSuccess(res, 200, 'Supplier updated successfully', { supplier });
   } catch (error: unknown) {
@@ -69,9 +80,14 @@ export const updateSupplier = async (req: AuthRequest, res: Response): Promise<v
 
 export const deleteSupplier = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const business = getBusinessContext(req, res);
+    if (!business) {
+      return;
+    }
+
     const { supplierId } = req.params;
 
-    await deleteSupplierService(supplierId);
+    await deleteSupplierService(business.id, supplierId);
 
     sendSuccess(res, 200, 'Supplier deleted successfully', null);
   } catch (error: unknown) {

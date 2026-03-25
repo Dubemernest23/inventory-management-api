@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../middlewares/auth';
+import { authenticate, authorizeBusiness, requireBusinessAccess } from '../middlewares/auth';
 import { validate } from '../middlewares/validate';
-import { UserRole } from '../types';
+import { BusinessRole } from '../types';
 
 // Supplier routes
 import {
@@ -14,12 +14,22 @@ import {
 import { createSupplierSchema, updateSupplierSchema } from '../utils/validation';
 
 export const supplierRoutes = Router();
-supplierRoutes.use(authenticate);
+supplierRoutes.use(authenticate, requireBusinessAccess);
 supplierRoutes.get('/', getAllSuppliers);
 supplierRoutes.get('/:supplierId', getSupplierById);
-supplierRoutes.post('/', authorize(UserRole.ADMIN, UserRole.MANAGER), validate(createSupplierSchema), createSupplier);
-supplierRoutes.patch('/:supplierId', authorize(UserRole.ADMIN, UserRole.MANAGER), validate(updateSupplierSchema), updateSupplier);
-supplierRoutes.delete('/:supplierId', authorize(UserRole.ADMIN), deleteSupplier);
+supplierRoutes.post(
+  '/',
+  authorizeBusiness(BusinessRole.OWNER, BusinessRole.MANAGER),
+  validate(createSupplierSchema),
+  createSupplier
+);
+supplierRoutes.patch(
+  '/:supplierId',
+  authorizeBusiness(BusinessRole.OWNER, BusinessRole.MANAGER),
+  validate(updateSupplierSchema),
+  updateSupplier
+);
+supplierRoutes.delete('/:supplierId', authorizeBusiness(BusinessRole.OWNER), deleteSupplier);
 
 // Warehouse routes
 import {
@@ -32,12 +42,22 @@ import {
 import { createWarehouseSchema, updateWarehouseSchema } from '../utils/validation';
 
 export const warehouseRoutes = Router();
-warehouseRoutes.use(authenticate);
+warehouseRoutes.use(authenticate, requireBusinessAccess);
 warehouseRoutes.get('/', getAllWarehouses);
 warehouseRoutes.get('/:warehouseId', getWarehouseById);
-warehouseRoutes.post('/', authorize(UserRole.ADMIN, UserRole.MANAGER), validate(createWarehouseSchema), createWarehouse);
-warehouseRoutes.patch('/:warehouseId', authorize(UserRole.ADMIN, UserRole.MANAGER), validate(updateWarehouseSchema), updateWarehouse);
-warehouseRoutes.delete('/:warehouseId', authorize(UserRole.ADMIN), deleteWarehouse);
+warehouseRoutes.post(
+  '/',
+  authorizeBusiness(BusinessRole.OWNER, BusinessRole.MANAGER),
+  validate(createWarehouseSchema),
+  createWarehouse
+);
+warehouseRoutes.patch(
+  '/:warehouseId',
+  authorizeBusiness(BusinessRole.OWNER, BusinessRole.MANAGER),
+  validate(updateWarehouseSchema),
+  updateWarehouse
+);
+warehouseRoutes.delete('/:warehouseId', authorizeBusiness(BusinessRole.OWNER), deleteWarehouse);
 
 // Category routes
 import {
@@ -49,11 +69,21 @@ import {
 import { createCategorySchema, updateCategorySchema } from '../utils/validation';
 
 export const categoryRoutes = Router();
-categoryRoutes.use(authenticate);
+categoryRoutes.use(authenticate, requireBusinessAccess);
 categoryRoutes.get('/', getAllCategories);
-categoryRoutes.post('/', authorize(UserRole.ADMIN, UserRole.MANAGER), validate(createCategorySchema), createCategory);
-categoryRoutes.patch('/:categoryId', authorize(UserRole.ADMIN, UserRole.MANAGER), validate(updateCategorySchema), updateCategory);
-categoryRoutes.delete('/:categoryId', authorize(UserRole.ADMIN), deleteCategory);
+categoryRoutes.post(
+  '/',
+  authorizeBusiness(BusinessRole.OWNER, BusinessRole.MANAGER),
+  validate(createCategorySchema),
+  createCategory
+);
+categoryRoutes.patch(
+  '/:categoryId',
+  authorizeBusiness(BusinessRole.OWNER, BusinessRole.MANAGER),
+  validate(updateCategorySchema),
+  updateCategory
+);
+categoryRoutes.delete('/:categoryId', authorizeBusiness(BusinessRole.OWNER), deleteCategory);
 
 // Stock movement routes
 import {
@@ -65,8 +95,8 @@ import {
 import { createStockMovementSchema } from '../utils/validation';
 
 export const stockRoutes = Router();
-stockRoutes.use(authenticate);
+stockRoutes.use(authenticate, requireBusinessAccess);
 stockRoutes.get('/movements', getAllStockMovements);
 stockRoutes.post('/movements', validate(createStockMovementSchema), createStockMovement);
 stockRoutes.get('/warehouse/:warehouseId', getInventoryByWarehouse);
-stockRoutes.get('/report', authorize(UserRole.ADMIN, UserRole.MANAGER), getStockReport);
+stockRoutes.get('/report', authorizeBusiness(BusinessRole.OWNER, BusinessRole.MANAGER), getStockReport);
