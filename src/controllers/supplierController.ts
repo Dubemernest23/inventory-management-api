@@ -1,99 +1,69 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
-import prisma from '../config/database';
-import { sendError, sendSuccess } from '../utils/response';
+import {
+  createSupplierService,
+  deleteSupplierService,
+  getAllSuppliersService,
+  getSupplierByIdService,
+  updateSupplierService
+} from '../services/supplierService';
+import { AppError, sendError, sendSuccess } from '../utils/response';
+
+const handleControllerError = (res: Response, error: unknown, fallbackMessage: string): void => {
+  if (error instanceof AppError) {
+    sendError(res, error.statusCode, error.message);
+    return;
+  }
+
+  if (error instanceof Error) {
+    sendError(res, 500, error.message || fallbackMessage);
+    return;
+  }
+
+  sendError(res, 500, fallbackMessage);
+};
 
 export const createSupplier = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const supplierData = req.body;
-
-    const supplier = await prisma.supplier.create({
-      data: supplierData
-    });
+    const supplier = await createSupplierService(req.body);
 
     sendSuccess(res, 201, 'Supplier created successfully', { supplier });
-  } catch (error: any) {
-    sendError(res, 500, error.message || 'Error creating supplier');
+  } catch (error: unknown) {
+    handleControllerError(res, error, 'Error creating supplier');
   }
 };
 
 export const getAllSuppliers = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { page = 1, limit = 10, search } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const where: any = {};
-    if (search) {
-      where.OR = [
-        { name: { contains: search as string } },
-        { email: { contains: search as string } }
-      ];
-    }
-
-    const [suppliers, total] = await Promise.all([
-      prisma.supplier.findMany({
-        where,
-        include: {
-          products: {
-            select: { id: true, name: true, sku: true }
-          }
-        },
-        skip,
-        take: Number(limit),
-        orderBy: { createdAt: 'desc' }
-      }),
-      prisma.supplier.count({ where })
-    ]);
+    const data = await getAllSuppliersService(req.query as Record<string, string | undefined>);
 
     sendSuccess(res, 200, 'Suppliers retrieved successfully', {
-      suppliers,
-      pagination: {
-        total,
-        page: Number(page),
-        limit: Number(limit),
-        totalPages: Math.ceil(total / Number(limit))
-      }
+      ...data
     });
-  } catch (error: any) {
-    sendError(res, 500, error.message || 'Error fetching suppliers');
+  } catch (error: unknown) {
+    handleControllerError(res, error, 'Error fetching suppliers');
   }
 };
 
 export const getSupplierById = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { supplierId } = req.params;
-
-    const supplier = await prisma.supplier.findUnique({
-      where: { id: supplierId },
-      include: {
-        products: true
-      }
-    });
-
-    if (!supplier) {
-      sendError(res, 404, 'Supplier not found');
-      return;
-    }
+    const supplier = await getSupplierByIdService(supplierId);
 
     sendSuccess(res, 200, 'Supplier retrieved successfully', { supplier });
-  } catch (error: any) {
-    sendError(res, 500, error.message || 'Error fetching supplier');
+  } catch (error: unknown) {
+    handleControllerError(res, error, 'Error fetching supplier');
   }
 };
 
 export const updateSupplier = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { supplierId } = req.params;
-    const updateData = req.body;
-
-    const supplier = await prisma.supplier.update({
-      where: { id: supplierId },
-      data: updateData
-    });
+    const supplier = await updateSupplierService(supplierId, req.body);
 
     sendSuccess(res, 200, 'Supplier updated successfully', { supplier });
-  } catch (error: any) {
-    sendError(res, 500, error.message || 'Error updating supplier');
+  } catch (error: unknown) {
+    handleControllerError(res, error, 'Error updating supplier');
   }
 };
 
@@ -101,12 +71,10 @@ export const deleteSupplier = async (req: AuthRequest, res: Response): Promise<v
   try {
     const { supplierId } = req.params;
 
-    await prisma.supplier.delete({
-      where: { id: supplierId }
-    });
+    await deleteSupplierService(supplierId);
 
     sendSuccess(res, 200, 'Supplier deleted successfully', null);
-  } catch (error: any) {
-    sendError(res, 500, error.message || 'Error deleting supplier');
+  } catch (error: unknown) {
+    handleControllerError(res, error, 'Error deleting supplier');
   }
 };

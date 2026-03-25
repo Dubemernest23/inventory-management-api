@@ -1,153 +1,51 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
-import prisma from '../config/database';
-import bcrypt from 'bcryptjs';
-import { generateTokenPair, verifyRefreshToken, generateAccessToken } from '../utils/jwt';
-import { sendError, sendSuccess } from '../utils/response';
+import {
+  getAllUsersService,
+  getUserProfile,
+  loginUser,
+  logoutUser,
+  refreshUserAccessToken,
+  registerUser
+} from '../services/authService';
+import {sendError, sendSuccess } from '../utils/response';
+import { handleControllerError } from '../__helper__/handleControllerError';
+
 
 export const register = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, email, password, role} = req.body;
-
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      sendError(res, 400, 'User with this email already exists');
-      return;
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: role || 'USER'
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true
-      }
-    });
-
-    // Generate tokens
-    const tokens = generateTokenPair({
-      id: user.id,
-      email: user.email,
-      role: user.role
-    });
-
-    // Store refresh token
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { refreshToken: tokens.refreshToken }
-    });
+    const data = await registerUser(req.body);
 
     sendSuccess(res, 201, 'User registered successfully', {
-      user,
-      ...tokens
+      ...data
     });
-  } catch (error: any) {
-    sendError(res, 500, error.message || 'Error registering user');
+  } catch (error: unknown) {
+    handleControllerError(res, error, 'Error registering user');
   }
 };
 
 export const login = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
-
-    if(!email || !password){
-      sendError(res, 400, "Only Email and password are required")
-      return;
-    }
-
-    // Find user
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      sendError(res, 401, 'Invalid credential(s)');
-      return;
-    }
-
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      sendError(res, 401, 'Invalid credential(s)');
-      return;
-    }
-
-    // Generate tokens
-    const tokens = generateTokenPair({
-      id: user.id,
-      email: user.email,
-      role: user.role
-    });
-
-    // Store refresh token
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { refreshToken: tokens.refreshToken }
-    });
+    const data = await loginUser(req.body);
 
     sendSuccess(res, 200, 'Login successful', {
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      },
-      ...tokens
+      ...data
     });
-  } catch (error: any) {
-    sendError(res, 500, error.message || 'Error logging in');
+  } catch (error: unknown) {
+    handleControllerError(res, error, 'Error logging in');
   }
 };
 
 export const refreshToken = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      sendError(res, 400, 'Refresh token is required');
-      return;
-    }
-
-    // Verify refresh token
-    let decoded;
-    try {
-      decoded = verifyRefreshToken(refreshToken);
-    } catch (error) {
-      sendError(res, 401, 'Invalid or expired refresh token');
-      return;
-    }
-
-    // Find user and verify stored refresh token
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id }
-    });
-
-    if (!user || user.refreshToken !== refreshToken) {
-      sendError(res, 401, 'Invalid refresh token');
-      return;
-    }
-
-    // Generate new access token
-    const accessToken = generateAccessToken({
-      id: user.id,
-      email: user.email,
-      role: user.role
-    });
+    const data = await refreshUserAccessToken(refreshToken);
 
     sendSuccess(res, 200, 'Token refreshed successfully', {
-      accessToken
+      ...data
     });
-  } catch (error: any) {
-    sendError(res, 500, error.message || 'Error refreshing token');
+  } catch (error: unknown) {
+    handleControllerError(res, error, 'Error refreshing token');
   }
 };
 
@@ -158,15 +56,11 @@ export const logout = async (req: AuthRequest, res: Response): Promise<void> => 
       return;
     }
 
-    // Clear refresh token
-    await prisma.user.update({
-      where: { id: req.user.id },
-      data: { refreshToken: null }
-    });
+    await logoutUser(req.user.id);
 
     sendSuccess(res, 200, 'Logged out successfully', null);
-  } catch (error: any) {
-    sendError(res, 500, error.message || 'Error logging out');
+  } catch (error: unknown) {
+    handleControllerError(res, error, 'Error logging out');
   }
 };
 
@@ -177,44 +71,20 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    });
-
-    if (!user) {
-      sendError(res, 404, 'User not found');
-      return;
-    }
+    const user = await getUserProfile(req.user.id);
 
     sendSuccess(res, 200, 'Profile retrieved successfully', { user });
-  } catch (error: any) {
-    sendError(res, 500, error.message || 'Error fetching profile');
+  } catch (error: unknown) {
+    handleControllerError(res, error, 'Error fetching profile');
   }
 };
 
 export const getAllUsers = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    });
+    const users = await getAllUsersService();
 
     sendSuccess(res, 200, 'Users retrieved successfully', { users, count: users.length });
-  } catch (error: any) {
-    sendError(res, 500, error.message || 'Error fetching users');
+  } catch (error: unknown) {
+    handleControllerError(res, error, 'Error fetching users');
   }
 };

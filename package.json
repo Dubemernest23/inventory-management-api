@@ -19,7 +19,7 @@
     "prisma",
     "typescript"
   ],
-  "author": "",
+  "author": "duby",
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^5.8.0",
